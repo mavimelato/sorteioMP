@@ -2,38 +2,37 @@ import streamlit as st
 import pandas as pd
 import random
 
-st.title("🎲 Sorteio - Matrícula Premiada")
+st.set_page_config(page_title="Sorteio Matricula Premiada", layout="centered")
 
-# Upload da base (ou leitura direta de arquivo)
-uploaded_file = st.file_uploader("base_sorteio.csv", type=["csv"])
+st.title("🎉 Sorteio Matricula Premiada")
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
+# Upload do CSV
+st.markdown("Faça upload do CSV com os dados das escolas (branch_id, branch_name, numeros_da_sorte)")
+file = st.file_uploader("Escolha o arquivo CSV", type=["csv"])
 
-    st.write("Prévia da base:")
+if file is not None:
+    df = pd.read_csv(file)
+
+    st.success(f"CSV carregado com sucesso! {len(df)} escolas encontradas.")
     st.dataframe(df.head())
 
-    # Define semente fixa
-    seed = st.number_input("Escolha a semente (opcional)", value=42)
-    random.seed(seed)
+    # Opções de sorteio
+    total_vencedores = st.number_input("Quantos vencedores sortear?", min_value=1, max_value=len(df), value=1, step=1)
 
-    # Cria lista de tickets (repete conforme numeros_da_sorte)
-    tickets = []
-    for _, row in df.iterrows():
-        tickets.extend([(row["branch_id"], row["branch_name"])] * int(row["numeros_da_sorte"]))
+    if st.button("Sortear!"):
+        # Criar lista de tickets (cada escola repete conforme numeros_da_sorte)
+        tickets = []
+        for _, row in df.iterrows():
+            tickets.extend([{"branch_id": row["branch_id"], "branch_name": row["branch_name"]}] * int(row["numeros_da_sorte"]))
 
-    st.write(f"Total de tickets: {len(tickets)}")
+        # Definir semente para reproducibilidade
+        random.seed()
 
-    # Define número de vencedores
-    k = st.number_input("Número de vencedores", min_value=1, value=5, step=1)
+        # Sorteio sem repetição
+        vencedores = random.sample(tickets, k=total_vencedores)
 
-    if st.button("🎉 Realizar sorteio"):
-        vencedores = random.sample(tickets, k)
-        vencedores_df = pd.DataFrame(vencedores, columns=["branch_id", "branch_name"]).drop_duplicates()
+        st.markdown("### 🏆 Resultado do Sorteio")
+        for i, v in enumerate(vencedores, start=1):
+            st.write(f"{i}. {v['branch_name']} (ID: {v['branch_id']})")
 
-        st.success("🏆 Escolas sorteadas:")
-        st.dataframe(vencedores_df)
-
-        # Download dos resultados
-        csv = vencedores_df.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Baixar resultado", csv, "vencedores.csv", "text/csv")
+        st.balloons()
